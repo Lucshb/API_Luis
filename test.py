@@ -79,7 +79,6 @@ def main():
                     popup=f"Caminhão: {registro.get('veiculo', {}).get('placa', 'Desconhecido')}<br>"
                           f"Data/Hora: {registro.get('dataTransacao')}<br>"
                           f"Local: {ponto_venda.get('razaoSocial', 'Desconhecido')}<br>"
-                          f"Endereço: {endereco.get('logradouro', '')}, {endereco.get('bairro', '')} - "
                           f"{endereco.get('municipio', '')}, {endereco.get('uf', '')}"
                 ).add_to(mapa)
         
