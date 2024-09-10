@@ -3,6 +3,40 @@ import folium
 from streamlit_folium import st_folium
 import requests
 import time
+import pandas as pd
+
+# Função para adicionar CSS personalizado
+def adicionar_estilo():
+    st.markdown("""
+        <style>
+        .stApp {
+            background-color: #1E1E1E;
+        }
+        .stMarkdown h1, h2, h3, h4, h5, h6 {
+            color: #F39C12;
+        }
+        .stMarkdown p {
+            color: #ECF0F1;
+        }
+        .stButton button {
+            background-color: #27AE60;
+            color: white;
+            border-radius: 12px;
+        }
+        .stButton button:hover {
+            background-color: #1ABC9C;
+        }
+        /* Ajusta o mapa para ocupar toda a largura e altura disponíveis */
+        iframe {
+            height: 85vh;
+            width: 100%;
+        }
+        /* Ajusta a tabela para ocupar toda a largura da página */
+        .dataframe-container {
+            width: 100%;
+        }
+        </style>
+    """, unsafe_allow_html=True)
 
 # Função para buscar os dados da API
 def obter_dados():
@@ -42,13 +76,39 @@ def horas_passadas_ultima_requisicao():
         if (tempo_atual - ultimo_tempo) >= 7200:
             return True
         else:
-            st.warning("Aguarde até 2 horas desde a última requisição.")
-            return False
+            return False  # Remove o aviso visual duplicado
     else:
         return True
 
+# Função para criar uma tabela de relatório dos veículos
+def gerar_tabela_relatorio(dados):
+    relatorio = []
+    for registro in dados:
+        veiculo = registro.get("veiculo", {}).get("placa", "Desconhecido")
+        data_hora = registro.get("dataTransacao", "N/A")
+        ponto_venda = registro.get("pontoVenda", {}).get("razaoSocial", "Desconhecido")
+        endereco = registro.get("pontoVenda", {}).get("endereco", {})
+        localizacao = f"{endereco.get('municipio', 'N/A')}, {endereco.get('uf', 'N/A')}"
+
+        relatorio.append({
+            "Placa": veiculo,
+            "Data/Hora": data_hora,
+            "Ponto de Venda": ponto_venda,
+            "Localização": localizacao
+        })
+    
+    df = pd.DataFrame(relatorio)
+    return df
+
 # Função principal do app
 def main():
+    # Define o layout para tela cheia
+    st.set_page_config(layout="wide")
+
+    # Chama a função para aplicar o estilo
+    adicionar_estilo()
+
+    # Título estilizado
     st.title("Localização dos Caminhões")
 
     # Se ainda não foram passadas 2 horas e já temos dados, usamos os dados anteriores
@@ -64,7 +124,8 @@ def main():
             dados = st.session_state.get('dados', [])  # Usa os dados existentes, se disponíveis
 
     if dados:
-        mapa = folium.Map(location=[-15.7934036, -47.8823172], zoom_start=4)
+        # Cria o mapa com tema escuro
+        mapa = folium.Map(location=[-15.7934036, -47.8823172], zoom_start=4, tiles="cartodb dark_matter")
 
         for registro in dados:
             ponto_venda = registro.get("pontoVenda", {})
@@ -74,15 +135,36 @@ def main():
             longitude = endereco.get("longitude", None)
             
             if latitude and longitude:
+                # Ícone personalizado para o caminhão
+                icon = folium.Icon(color='blue', icon='truck', prefix='fa')
+                
+                # HTML personalizado para o popup com largura aumentada
+                popup_content = f"""
+                <div style="width: 300px; font-size: 14px;">
+                    <b>Caminhão:</b> {registro.get('veiculo', {}).get('placa', 'Desconhecido')}<br>
+                    <b>Data/Hora:</b> {registro.get('dataTransacao')}<br>
+                    <b>Local:</b> {ponto_venda.get('razaoSocial', 'Desconhecido')}<br>
+                    {endereco.get('municipio', '')}, {endereco.get('uf', '')}
+                </div>
+                """
+                
+                # Cria o popup com tamanho ajustado
                 folium.Marker(
                     [latitude, longitude],
-                    popup=f"Caminhão: {registro.get('veiculo', {}).get('placa', 'Desconhecido')}<br>"
-                          f"Data/Hora: {registro.get('dataTransacao')}<br>"
-                          f"Local: {ponto_venda.get('razaoSocial', 'Desconhecido')}<br>"
-                          f"{endereco.get('municipio', '')}, {endereco.get('uf', '')}"
+                    popup=folium.Popup(popup_content, max_width=400),  # Aumenta o tamanho do popup
+                    icon=icon
                 ).add_to(mapa)
         
-        st_folium(mapa, width=700, height=500)
+        # Exibe o mapa com as novas dimensões
+        st_folium(mapa, width='100%')
+
+        # Gera a tabela de relatório abaixo do mapa
+        df_relatorio = gerar_tabela_relatorio(dados)
+        st.subheader("Relatório de Veículos")
+        
+        # Usar st.dataframe para interatividade e ajuste automático
+        st.dataframe(df_relatorio, use_container_width=True)
+
     else:
         st.write("Nenhum dado disponível para exibir.")
 
