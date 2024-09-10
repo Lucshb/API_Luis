@@ -192,8 +192,12 @@ def main():
             # Exibe o mapa com as novas dimensões
             st_folium(mapa, width='100%')
 
-        else:
-            st.write("Nenhuma localização de caminhão disponível para exibir.")
+        # Gera a tabela de relatório abaixo do mapa
+        df_relatorio = gerar_tabela_relatorio(dados)
+        st.subheader("Relatório de Veículos e Abastecimentos")
+        
+        # Usar st.dataframe para interatividade e ajuste automático
+        st.dataframe(df_relatorio, use_container_width=True)
 
     else:
         st.write("Nenhum dado disponível para exibir.")
