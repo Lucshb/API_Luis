@@ -144,46 +144,56 @@ def main():
             dados = st.session_state.get('dados', [])  # Usa os dados existentes, se disponíveis
 
     if dados:
-        # Cria o mapa com tema escuro
-        mapa = folium.Map(location=[-15.7934036, -47.8823172], zoom_start=4, tiles="cartodb dark_matter")
-
+        # Coletar as coordenadas de todos os caminhões
+        coordenadas = []
         for registro in dados:
             ponto_venda = registro.get("pontoVenda", {})
-            data_transacao = registro.get("dataTransacao", {})
             endereco = ponto_venda.get("endereco", {})
             latitude = endereco.get("latitude", None)
             longitude = endereco.get("longitude", None)
             
             if latitude and longitude:
-                # Ícone personalizado para o caminhão
-                icon = folium.Icon(color='blue', icon='truck', prefix='fa')
-                
-                # HTML personalizado para o popup com largura aumentada
-                popup_content = f"""
-                <div style="width: 300px; font-size: 14px;">
-                    <b>Caminhão:</b> {registro.get('veiculo', {}).get('placa', 'Desconhecido')}<br>
-                    <b>Data/Hora:</b> {registro.get('dataTransacao')}<br>
-                    <b>Local:</b> {ponto_venda.get('razaoSocial', 'Desconhecido')}<br>
-                    {endereco.get('municipio', '')}, {endereco.get('uf', '')}
-                </div>
-                """
-                
-                # Cria o popup com tamanho ajustado
-                folium.Marker(
-                    [latitude, longitude],
-                    popup=folium.Popup(popup_content, max_width=400),  # Aumenta o tamanho do popup
-                    icon=icon
-                ).add_to(mapa)
-        
-        # Exibe o mapa com as novas dimensões
-        st_folium(mapa, width='100%')
+                coordenadas.append([latitude, longitude])  # Adiciona as coordenadas à lista
 
-        # Gera a tabela de relatório abaixo do mapa
-        df_relatorio = gerar_tabela_relatorio(dados)
-        st.subheader("Relatório de Veículos e Abastecimentos")
-        
-        # Usar st.dataframe para interatividade e ajuste automático
-        st.dataframe(df_relatorio, use_container_width=True)
+        # Criar o mapa e ajustar o zoom com base nas coordenadas
+        if coordenadas:
+            mapa = folium.Map(zoom_start=4, tiles="cartodb dark_matter")
+            mapa.fit_bounds(coordenadas)  # Ajusta o zoom e centraliza o mapa com base nas coordenadas
+
+            # Adiciona marcadores para cada caminhão
+            for registro in dados:
+                ponto_venda = registro.get("pontoVenda", {})
+                data_transacao = registro.get("dataTransacao", {})
+                endereco = ponto_venda.get("endereco", {})
+                latitude = endereco.get("latitude", None)
+                longitude = endereco.get("longitude", None)
+                
+                if latitude and longitude:
+                    # Ícone personalizado para o caminhão
+                    icon = folium.Icon(color='blue', icon='truck', prefix='fa')
+                    
+                    # HTML personalizado para o popup com largura aumentada
+                    popup_content = f"""
+                    <div style="width: 300px; font-size: 14px;">
+                        <b>Caminhão:</b> {registro.get('veiculo', {}).get('placa', 'Desconhecido')}<br>
+                        <b>Data/Hora:</b> {registro.get('dataTransacao')}<br>
+                        <b>Local:</b> {ponto_venda.get('razaoSocial', 'Desconhecido')}<br>
+                        {endereco.get('municipio', '')}, {endereco.get('uf', '')}
+                    </div>
+                    """
+                    
+                    # Cria o popup com tamanho ajustado
+                    folium.Marker(
+                        [latitude, longitude],
+                        popup=folium.Popup(popup_content, max_width=400),  # Aumenta o tamanho do popup
+                        icon=icon
+                    ).add_to(mapa)
+
+            # Exibe o mapa com as novas dimensões
+            st_folium(mapa, width='100%')
+
+        else:
+            st.write("Nenhuma localização de caminhão disponível para exibir.")
 
     else:
         st.write("Nenhum dado disponível para exibir.")
