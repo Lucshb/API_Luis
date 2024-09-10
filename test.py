@@ -80,24 +80,44 @@ def horas_passadas_ultima_requisicao():
     else:
         return True
 
-# Função para criar uma tabela de relatório dos veículos
+# Função para criar uma tabela de relatório dos veículos com novos campos
 def gerar_tabela_relatorio(dados):
     relatorio = []
     for registro in dados:
         veiculo = registro.get("veiculo", {}).get("placa", "Desconhecido")
         data_hora = registro.get("dataTransacao", "N/A")
+        hodometro = registro.get("hodometro", "N/A")
         ponto_venda = registro.get("pontoVenda", {}).get("razaoSocial", "Desconhecido")
         endereco = registro.get("pontoVenda", {}).get("endereco", {})
         localizacao = f"{endereco.get('municipio', 'N/A')}, {endereco.get('uf', 'N/A')}"
+        
+        # Extrair informações dos itens abastecidos
+        if "items" in registro:
+            for item in registro["items"]:
+                produto = item.get("nome", "N/A")
+                quantidade = item.get("quantidade", "N/A")
+                valor_unitario = item.get("valorUnitario", "N/A")
+                valor_total = item.get("valorTotal", "N/A")
 
-        relatorio.append({
-            "Placa": veiculo,
-            "Data/Hora": data_hora,
-            "Ponto de Venda": ponto_venda,
-            "Localização": localizacao
-        })
+                # Adicionar informações ao relatório
+                relatorio.append({
+                    "Placa": veiculo,
+                    "Data/Hora": data_hora,
+                    "Hodômetro": hodometro,
+                    "Ponto de Venda": ponto_venda,
+                    "Localização": localizacao,
+                    "Produto": produto,
+                    "Quantidade Abastecida": quantidade,
+                    "Valor Unitário (R$)": valor_unitario,
+                    "Faturamento Total (R$)": valor_total
+                })
     
     df = pd.DataFrame(relatorio)
+    
+    # Formatar as colunas de valores monetários com cifrão e duas casas decimais
+    df['Valor Unitário (R$)'] = df['Valor Unitário (R$)'].apply(lambda x: f'R${x:.2f}')
+    df['Faturamento Total (R$)'] = df['Faturamento Total (R$)'].apply(lambda x: f'R${x:.2f}')
+    
     return df
 
 # Função principal do app
@@ -160,7 +180,7 @@ def main():
 
         # Gera a tabela de relatório abaixo do mapa
         df_relatorio = gerar_tabela_relatorio(dados)
-        st.subheader("Relatório de Veículos")
+        st.subheader("Relatório de Veículos e Abastecimentos")
         
         # Usar st.dataframe para interatividade e ajuste automático
         st.dataframe(df_relatorio, use_container_width=True)
