@@ -133,9 +133,6 @@ def main():
     adicionar_estilo()
     st.title("Localização dos Caminhões")
 
-    # Debug: Exibir diretamente os dados simulados gerados
-    st.subheader("Dados simulados gerados:")
-    
     if 'dados' in st.session_state and not horas_passadas_ultima_requisicao():
         dados = st.session_state['dados']
     else:
@@ -145,9 +142,6 @@ def main():
             st.session_state['ultimo_tempo'] = time.time()
         else:
             dados = st.session_state.get('dados', [])
-
-    # Exibindo os dados simulados diretamente no app para fins de debug
-    st.write(dados)
 
     if dados:
         coordenadas = []
