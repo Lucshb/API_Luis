@@ -39,21 +39,38 @@ def adicionar_estilo():
 
 # Função para gerar dados simulados
 def gerar_dados_simulados():
-    veiculos = ["ABC-1234", "XYZ-5678", "DEF-9012", "GHI-3456", "JKL-7890"]
+    veiculos = [
+        "ABC-1234", "XYZ-5678", "DEF-9012", "GHI-3456", "JKL-7890", "MNO-4567", "PQR-8901", "STU-2345", "VWX-6789", "YZA-0123",
+        "BCD-3456", "EFG-7890", "HIJ-1234", "KLM-5678", "NOP-9012", "QRS-3456", "TUV-7890", "WXY-1234", "ZAB-5678", "CDE-9012"
+    ]
     pontos_venda = [
         {"razaoSocial": "Posto Alpha", "endereco": {"municipio": "São Paulo", "uf": "SP", "latitude": -23.55052, "longitude": -46.633308}},
         {"razaoSocial": "Posto Beta", "endereco": {"municipio": "Rio de Janeiro", "uf": "RJ", "latitude": -22.906847, "longitude": -43.172896}},
         {"razaoSocial": "Posto Gamma", "endereco": {"municipio": "Belo Horizonte", "uf": "MG", "latitude": -19.916681, "longitude": -43.934493}},
         {"razaoSocial": "Posto Delta", "endereco": {"municipio": "Curitiba", "uf": "PR", "latitude": -25.428954, "longitude": -49.267137}},
-        {"razaoSocial": "Posto Epsilon", "endereco": {"municipio": "Porto Alegre", "uf": "RS", "latitude": -30.034647, "longitude": -51.217658}}
+        {"razaoSocial": "Posto Epsilon", "endereco": {"municipio": "Porto Alegre", "uf": "RS", "latitude": -30.034647, "longitude": -51.217658}},
+        {"razaoSocial": "Posto Zeta", "endereco": {"municipio": "Brasília", "uf": "DF", "latitude": -15.794229, "longitude": -47.882166}},
+        {"razaoSocial": "Posto Eta", "endereco": {"municipio": "Fortaleza", "uf": "CE", "latitude": -3.71722, "longitude": -38.543369}},
+        {"razaoSocial": "Posto Theta", "endereco": {"municipio": "Salvador", "uf": "BA", "latitude": -12.9714, "longitude": -38.5014}},
+        {"razaoSocial": "Posto Iota", "endereco": {"municipio": "Florianópolis", "uf": "SC", "latitude": -27.595377, "longitude": -48.54805}},
+        {"razaoSocial": "Posto Kappa", "endereco": {"municipio": "Manaus", "uf": "AM", "latitude": -3.119028, "longitude": -60.021731}}
     ]
-    produtos = ["Diesel", "Gasolina", "Álcool"]
+    
+    # Priorizar os produtos Arla 32, Diesel Comum, Diesel S-10
+    produtos_comuns = ["Arla 32", "Diesel Comum", "Diesel S-10"]
+    produtos_menos_comuns = ["Gasolina", "Etanol"]
     
     registros = []
-    for _ in range(10):  # Gerar 10 registros simulados
+    for _ in range(50):  # Gerar 50 registros simulados
         veiculo = random.choice(veiculos)
         ponto_venda = random.choice(pontos_venda)
-        produto = random.choice(produtos)
+        
+        # 90% de chance de ser um produto comum, 10% de chance de ser gasolina ou etanol
+        if random.random() < 0.9:
+            produto = random.choice(produtos_comuns)
+        else:
+            produto = random.choice(produtos_menos_comuns)
+        
         quantidade = random.uniform(50, 200)  # Quantidade entre 50 e 200 litros
         valor_unitario = random.uniform(4.0, 6.0)  # Valor entre R$ 4,00 e R$ 6,00 por litro
         valor_total = quantidade * valor_unitario
