@@ -1,9 +1,10 @@
 import streamlit as st
 import folium
 from streamlit_folium import st_folium
-import requests
 import time
 import pandas as pd
+import random
+from datetime import datetime, timedelta
 
 # Função para adicionar CSS personalizado
 def adicionar_estilo():
@@ -26,57 +27,67 @@ def adicionar_estilo():
         .stButton button:hover {
             background-color: #1ABC9C;
         }
-        /* Ajusta o mapa para ocupar toda a largura e altura disponíveis */
         iframe {
             height: 85vh;
             width: 100%;
         }
-        /* Ajusta a tabela para ocupar toda a largura da página */
         .dataframe-container {
             width: 100%;
         }
         </style>
     """, unsafe_allow_html=True)
 
-# Função para buscar os dados da API
-def obter_dados():
-    url = "http://api-portal.profrotas.com.br/api/frotista/abastecimento/pesquisa"
-    headers = {
-        "Authorization": "Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJ1c3VhcmlvLmZyb3RhIjozNzU0LCJ0b2tlbi50aXBvIjoiQVBJX0ZST1RJU1RBIiwidG9rZW4udmVyc2FvIjoiUC0wMDAyIiwiaXNzIjoiQm9sZWlhIiwidG9rZW4uZGF0YUdlcmFjYW8iOjE3MjM3NjI2MTcsInVzdWFyaW8ucGVybWlzc29lcyI6WyJBUElfRlJPVElTVEEiXSwiZXhwIjoxNzI2MzU0NjE3LCJ1c3VhcmlvLmlkIjotMzk1NDU5MDYxMjg1NzczNzMwOSwidXN1YXJpby5ub21lIjoiVHJhbnNwb3J0YWRvcmEgRGFuZ2xhcmVzIER1YXJ0ZSBMdGRhIiwidXN1YXJpby50aXBvIjoiRlJPVEEiLCJ0b2tlbi5jb250YWRvclJlbm92YWNvZXMiOjB9.Mr0kTwIU3rNmb9eRseZwGGXOezKyUASuzhvu4xQsrqo",
-        "Content-Type": "application/json"
-    }
-    data = {
-        "pagina": 1,
-        "dataInicial": "2024-08-01T00:00:00Z",
-        "dataFinal": "2024-08-15T23:59:59Z"
-    }
+# Função para gerar dados simulados
+def gerar_dados_simulados():
+    veiculos = ["ABC-1234", "XYZ-5678", "DEF-9012", "GHI-3456", "JKL-7890"]
+    pontos_venda = [
+        {"razaoSocial": "Posto Alpha", "endereco": {"municipio": "São Paulo", "uf": "SP", "latitude": -23.55052, "longitude": -46.633308}},
+        {"razaoSocial": "Posto Beta", "endereco": {"municipio": "Rio de Janeiro", "uf": "RJ", "latitude": -22.906847, "longitude": -43.172896}},
+        {"razaoSocial": "Posto Gamma", "endereco": {"municipio": "Belo Horizonte", "uf": "MG", "latitude": -19.916681, "longitude": -43.934493}},
+        {"razaoSocial": "Posto Delta", "endereco": {"municipio": "Curitiba", "uf": "PR", "latitude": -25.428954, "longitude": -49.267137}},
+        {"razaoSocial": "Posto Epsilon", "endereco": {"municipio": "Porto Alegre", "uf": "RS", "latitude": -30.034647, "longitude": -51.217658}}
+    ]
+    produtos = ["Diesel", "Gasolina", "Álcool"]
     
-    try:
-        response = requests.post(url, headers=headers, json=data)
-        response.raise_for_status()
-        return response.json().get("registros", [])
-    except requests.exceptions.HTTPError as e:
-        if response.status_code == 429:
-            st.error("Erro 429: Muitas requisições. Aguardando para tentar novamente...")
-            time.sleep(60)  # Aguarda 60 segundos antes de tentar novamente
-            return obter_dados()  # Tenta novamente
-        else:
-            st.error(f"Erro ao obter dados: {response.status_code}")
-            return []
-    except Exception as e:
-        st.error(f"Erro ao obter dados: {str(e)}")
-        return []
+    registros = []
+    for _ in range(10):  # Gerar 10 registros simulados
+        veiculo = random.choice(veiculos)
+        ponto_venda = random.choice(pontos_venda)
+        produto = random.choice(produtos)
+        quantidade = random.uniform(50, 200)  # Quantidade entre 50 e 200 litros
+        valor_unitario = random.uniform(4.0, 6.0)  # Valor entre R$ 4,00 e R$ 6,00 por litro
+        valor_total = quantidade * valor_unitario
+        hodometro = random.randint(10000, 50000)  # Hodômetro entre 10.000 e 50.000 km
+        
+        # Gerar data/hora aleatória nos últimos 15 dias
+        data_transacao = (datetime.now() - timedelta(days=random.randint(0, 15))).strftime('%Y-%m-%dT%H:%M:%S')
+        
+        registros.append({
+            "veiculo": {"placa": veiculo},
+            "dataTransacao": data_transacao,
+            "hodometro": hodometro,
+            "pontoVenda": ponto_venda,
+            "items": [
+                {
+                    "nome": produto,
+                    "quantidade": quantidade,
+                    "valorUnitario": valor_unitario,
+                    "valorTotal": valor_total
+                }
+            ]
+        })
+    
+    return registros
 
 # Função para verificar se já passaram 2 horas desde a última requisição
 def horas_passadas_ultima_requisicao():
     ultimo_tempo = st.session_state.get('ultimo_tempo', None)
     if ultimo_tempo:
         tempo_atual = time.time()
-        # 2 horas = 7200 segundos
         if (tempo_atual - ultimo_tempo) >= 7200:
             return True
         else:
-            return False  # Remove o aviso visual duplicado
+            return False
     else:
         return True
 
@@ -91,7 +102,6 @@ def gerar_tabela_relatorio(dados):
         endereco = registro.get("pontoVenda", {}).get("endereco", {})
         localizacao = f"{endereco.get('municipio', 'N/A')}, {endereco.get('uf', 'N/A')}"
         
-        # Extrair informações dos itens abastecidos
         if "items" in registro:
             for item in registro["items"]:
                 produto = item.get("nome", "N/A")
@@ -99,7 +109,6 @@ def gerar_tabela_relatorio(dados):
                 valor_unitario = item.get("valorUnitario", "N/A")
                 valor_total = item.get("valorTotal", "N/A")
 
-                # Adicionar informações ao relatório
                 relatorio.append({
                     "Placa": veiculo,
                     "Data/Hora": data_hora,
@@ -113,8 +122,6 @@ def gerar_tabela_relatorio(dados):
                 })
     
     df = pd.DataFrame(relatorio)
-    
-    # Formatar as colunas de valores monetários com cifrão e duas casas decimais
     df['Valor Unitário (R$)'] = df['Valor Unitário (R$)'].apply(lambda x: f'R${x:.2f}')
     df['Faturamento Total (R$)'] = df['Faturamento Total (R$)'].apply(lambda x: f'R${x:.2f}')
     
@@ -122,29 +129,21 @@ def gerar_tabela_relatorio(dados):
 
 # Função principal do app
 def main():
-    # Define o layout para tela cheia
     st.set_page_config(layout="wide")
-
-    # Chama a função para aplicar o estilo
     adicionar_estilo()
-
-    # Título estilizado
     st.title("Localização dos Caminhões")
 
-    # Se ainda não foram passadas 2 horas e já temos dados, usamos os dados anteriores
     if 'dados' in st.session_state and not horas_passadas_ultima_requisicao():
         dados = st.session_state['dados']
     else:
-        # Se já passaram 2 horas ou não temos dados armazenados, faz a requisição
         if horas_passadas_ultima_requisicao():
-            dados = obter_dados()
-            st.session_state['dados'] = dados  # Armazena os dados na sessão
-            st.session_state['ultimo_tempo'] = time.time()  # Atualiza o tempo da última requisição
+            dados = gerar_dados_simulados()
+            st.session_state['dados'] = dados
+            st.session_state['ultimo_tempo'] = time.time()
         else:
-            dados = st.session_state.get('dados', [])  # Usa os dados existentes, se disponíveis
+            dados = st.session_state.get('dados', [])
 
     if dados:
-        # Coletar as coordenadas de todos os caminhões
         coordenadas = []
         for registro in dados:
             ponto_venda = registro.get("pontoVenda", {})
@@ -153,14 +152,12 @@ def main():
             longitude = endereco.get("longitude", None)
             
             if latitude and longitude:
-                coordenadas.append([latitude, longitude])  # Adiciona as coordenadas à lista
+                coordenadas.append([latitude, longitude])
 
-        # Criar o mapa e ajustar o zoom com base nas coordenadas
         if coordenadas:
             mapa = folium.Map(zoom_start=4, tiles="cartodb dark_matter")
-            mapa.fit_bounds(coordenadas)  # Ajusta o zoom e centraliza o mapa com base nas coordenadas
+            mapa.fit_bounds(coordenadas)
 
-            # Adiciona marcadores para cada caminhão
             for registro in dados:
                 ponto_venda = registro.get("pontoVenda", {})
                 data_transacao = registro.get("dataTransacao", {})
@@ -169,10 +166,7 @@ def main():
                 longitude = endereco.get("longitude", None)
                 
                 if latitude and longitude:
-                    # Ícone personalizado para o caminhão
                     icon = folium.Icon(color='blue', icon='truck', prefix='fa')
-                    
-                    # HTML personalizado para o popup com largura aumentada
                     popup_content = f"""
                     <div style="width: 300px; font-size: 14px;">
                         <b>Caminhão:</b> {registro.get('veiculo', {}).get('placa', 'Desconhecido')}<br>
@@ -181,27 +175,20 @@ def main():
                         {endereco.get('municipio', '')}, {endereco.get('uf', '')}
                     </div>
                     """
-                    
-                    # Cria o popup com tamanho ajustado
                     folium.Marker(
                         [latitude, longitude],
-                        popup=folium.Popup(popup_content, max_width=400),  # Aumenta o tamanho do popup
+                        popup=folium.Popup(popup_content, max_width=400),
                         icon=icon
                     ).add_to(mapa)
 
-            # Exibe o mapa com as novas dimensões
             st_folium(mapa, width='100%')
 
-        # Gera a tabela de relatório abaixo do mapa
         df_relatorio = gerar_tabela_relatorio(dados)
         st.subheader("Relatório de Veículos e Abastecimentos")
-        
-        # Usar st.dataframe para interatividade e ajuste automático
         st.dataframe(df_relatorio, use_container_width=True)
 
     else:
         st.write("Nenhum dado disponível para exibir.")
 
-# Executa a função principal
 if __name__ == "__main__":
     main()
